@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6f62">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Metas do Dia</title>
+<style>
+@font-face{font-family:"Bricolage Grotesque";src:url(bricolage-700.woff2) format("woff2");font-weight:500 700;font-display:swap}
+@font-face{font-family:"Figtree";src:url(figtree-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Figtree";src:url(figtree-500.woff2) format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Figtree";src:url(figtree-600.woff2) format("woff2");font-weight:600 700;font-display:swap}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+/* Layout: single phone column — header with today's score ring, three tabs (Hoje · Calendário · Metas), content cards below */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#15211f; --muted:#5f6e6b; --line:#dde3e1;
+  --accent:#1f6f62; --accent-ink:#ffffff;
+  --l0:#f1d9d4; --l1:#f2e2b8; --l2:#b9dccf; --l3:#d39b1c; --l3-ink:#2a1d00; --none:#e8ecea;
+  --bad:#b4432f; --good:#1f6f62;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1514; --surface:#18211f; --ink:#e6eeec; --muted:#93a39f; --line:#2a3633;
+  --accent:#5cc2ad; --accent-ink:#06201b;
+  --l0:#4a2621; --l1:#4a3f1f; --l2:#1f4a40; --l3:#e8b23a; --l3-ink:#231700; --none:#1f2a28;
+  --bad:#e57a63; --good:#5cc2ad; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --surface:#18211f; --ink:#e6eeec; --muted:#93a39f; --line:#2a3633;
+  --accent:#5cc2ad; --accent-ink:#06201b;
+  --l0:#4a2621; --l1:#4a3f1f; --l2:#1f4a40; --l3:#e8b23a; --l3-ink:#231700; --none:#1f2a28;
+  --bad:#e57a63; --good:#5cc2ad; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:max(12px, env(safe-area-inset-top, 0px)) 40px}
+.wrap{max-width:520px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.wrap>*{min-width:0}
+[hidden]{display:none!important}
+.card .btn{white-space:normal}
+h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:1.6rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.15rem;font-weight:700}
+.sub{color:var(--muted);font-size:.9rem}
+header{display:flex;align-items:center;gap:14px}
+header .txt{flex:1;min-width:0}
+.ring{width:64px;height:64px;flex:none}
+.ring text{font-family:var(--display);font-weight:700;font-size:15px;fill:var(--ink)}
+nav{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+nav button{font:600 .92rem var(--body);color:var(--muted);background:transparent;border:0;border-radius:9px;padding:10px 4px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;align-items:center;gap:10px}
+.notice{font-size:.88rem;color:var(--muted);background:var(--none);border-radius:10px;padding:10px 12px}
+.evening{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.evening b{font-family:var(--display);font-size:1.05rem}
+ul.items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+ul.items li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+ul.items li:first-child{border-top:0}
+.itxt{flex:1;min-width:0;overflow-wrap:anywhere}
+.tag{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+li.done .itxt{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--good)}
+.st{display:flex;gap:6px;flex:none}
+.st button{width:42px;height:38px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--muted);font:700 1.05rem var(--body);cursor:pointer}
+.st button.yes[aria-pressed="true"]{background:var(--good);border-color:var(--good);color:var(--accent-ink)}
+.st button.no[aria-pressed="true"]{background:var(--bad);border-color:var(--bad);color:#fff}
+.x{border:0;background:transparent;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px;border-radius:8px}
+form.add{display:flex;gap:8px}
+form.add input{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.btn{font:600 .95rem var(--body);border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:10px 14px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:500 .88rem var(--body);border:1px dashed var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.calhead{display:flex;align-items:center;justify-content:space-between}
+.calhead h2{}
+.nav2{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);font-size:1.1rem;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.dow{text-align:center;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-bottom:2px}
+.day{aspect-ratio:1;max-width:100%;border-radius:10px;border:0;background:var(--none);color:var(--ink);font:600 .9rem var(--body);font-variant-numeric:tabular-nums;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;padding:0}
+.day.empty{background:transparent;cursor:default}
+.day.l0{background:var(--l0)} .day.l1{background:var(--l1)} .day.l2{background:var(--l2)}
+.day.l3{background:var(--l3);color:var(--l3-ink);box-shadow:0 0 0 2px var(--l3) inset, 0 2px 8px color-mix(in srgb, var(--l3) 45%, transparent)}
+.day.l3::after{content:"★";position:absolute;top:1px;right:4px;font-size:.62rem}
+.day.today{outline:2px solid var(--ink);outline-offset:1px}
+.day.future{opacity:.45;cursor:default}
+.legend{display:flex;flex-wrap:wrap;gap:10px 14px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:4px;display:inline-block}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat b{font-family:var(--display);font-size:1.4rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.78rem;color:var(--muted)}
+.bar{height:8px;border-radius:99px;background:var(--none);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+@media (prefers-reduced-motion: reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r="27" fill="none" stroke="var(--none)" stroke-width="7"></circle>
+      <circle id="ringArc" cx="32" cy="32" r="27" fill="none" stroke="var(--accent)" stroke-width="7" stroke-linecap="round" transform="rotate(-90 32 32)" stroke-dasharray="0 170"></circle>
+      <text id="ringTxt" x="32" y="37" text-anchor="middle">–</text>
+    </svg>
+    <div class="txt">
+      <h1>Metas do Dia</h1>
+      <div class="sub" id="todayLabel"></div>
+    </div>
+  </header>
+
+  <nav role="tablist">
+    <button role="tab" id="tab-hoje" data-v="hoje" aria-selected="true">Hoje</button>
+    <button role="tab" id="tab-cal" data-v="cal" aria-selected="false">Calendário</button>
+    <button role="tab" id="tab-metas" data-v="metas" aria-selected="false">Metas</button>
+  </nav>
+
+  <div id="status" class="notice" hidden></div>
+
+  <section id="v-hoje" class="wrap" style="gap:16px"></section>
+  <section id="v-cal" class="wrap" style="gap:16px" hidden></section>
+  <section id="v-metas" class="wrap" style="gap:16px" hidden></section>
+</div>
+
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,'0');
+const keyOf = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parseKey = k => { const [y,m,d]=k.split('-').map(Number); return new Date(y,m-1,d); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid = () => Math.random().toString(36).slice(2,10);
+const fmtLong = d => d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+
+const S = { goals:[], days:{}, view:'hoje', sel:null, month:null, col:null, ready:false };
+let today = keyOf(new Date());
+S.sel = today; S.month = new Date(); S.month.setDate(1);
+
+const SUGESTOES = ['Ler 30 minutos','Fazer exercício','Beber 2 L de água','Orar / meditar','Dormir antes das 23h','Revisar a agenda de amanhã'];
+
+/* ---------- dados ---------- */
+function dayItems(k){
+  const doc = S.days[k];
+  const fixed = S.goals.map(g => ({id:g.id, text:g.text, extra:false, done:null}));
+  if(!doc) return k <= today ? fixed : [];
+  const items = doc.items.map(i => ({...i}));
+  if(k === today){ // hoje acompanha as metas fixas atuais
+    const ids = new Set(S.goals.map(g=>g.id));
+    const kept = items.filter(i => i.extra || ids.has(i.id) || i.done !== null);
+    for(const g of S.goals) if(!kept.some(i=>i.id===g.id)) kept.push({id:g.id,text:g.text,extra:false,done:null});
+    return kept;
+  }
+  return items;
+}
+function score(k){
+  if(!S.days[k]) return null;
+  const it = dayItems(k); if(!it.length) return null;
+  return it.filter(i=>i.done===true).length / it.length;
+}
+function level(p){ if(p===null) return ''; if(p>=1) return 'l3'; if(p>=.5) return 'l2'; if(p>0) return 'l1'; return 'l0'; }
+
+const KEY = 'metas-do-dia-v1';
+function persist(){
+  try{ localStorage.setItem(KEY, JSON.stringify({goals:S.goals, days:S.days})); }
+  catch(e){ $('#status').hidden=false; $('#status').textContent='Não consegui salvar no celular. Verifique se há espaço livre.'; }
+}
+function write(){ persist(); }
+function saveDay(k, items){
+  S.days[k] = {date:k, items, updated:Date.now()};
+  write(); render();
+}
+function saveGoals(){ write(); render(); }
+
+function setDone(k, id, val){
+  const items = dayItems(k);
+  const it = items.find(i=>i.id===id); if(!it) return;
+  it.done = (it.done === val) ? null : val;
+  saveDay(k, items);
+}
+function addExtra(k, text){ const items = dayItems(k); items.push({id:uid(), text, extra:true, done:null}); saveDay(k, items); }
+function removeExtra(k, id){ saveDay(k, dayItems(k).filter(i=>i.id!==id)); }
+function markRest(k){ const items = dayItems(k); items.forEach(i=>{ if(i.done===null) i.done=false; }); saveDay(k, items); }
+
+/* ---------- views ---------- */
+function renderRing(){
+  const p = score(today), arc = $('#ringArc'), C = 2*Math.PI*27;
+  const v = p===null ? 0 : p;
+  arc.setAttribute('stroke-dasharray', (v*C)+' '+C);
+  arc.setAttribute('stroke', p===1 ? 'var(--l3)' : 'var(--accent)');
+  $('#ringTxt').textContent = p===null ? '–' : Math.round(p*100)+'%';
+  $('#todayLabel').textContent = fmtLong(new Date());
+}
+
+function dayCard(k){
+  const items = dayItems(k);
+  const isToday = k===today;
+  const done = items.filter(i=>i.done===true).length;
+  const pend = items.filter(i=>i.done===null).length;
+  const title = isToday ? 'Metas de hoje' : fmtLong(parseKey(k));
+  let h = `<div class="card"><div class="row"><h2 style="flex:1">${esc(title)}</h2><span class="sub">${done}/${items.length}</span></div>`;
+  h += `<div class="bar"><i style="width:${items.length?done/items.length*100:0}%"></i></div>`;
+  if(!items.length){
+    h += `<p class="sub" style="margin:0">Nenhuma meta para este dia. Cadastre suas metas fixas na aba <b>Metas</b> ou adicione uma extra abaixo.</p>`;
+  } else {
+    h += `<ul class="items">` + items.map(i => `<li class="${i.done===true?'done':''}">
+      <span class="itxt">${esc(i.text)}${i.extra?'<span class="tag">extra</span>':''}</span>
+      <span class="st">
+        <button class="yes" aria-label="Cumprida" aria-pressed="${i.done===true}" data-a="yes" data-k="${k}" data-id="${i.id}">✓</button>
+        <button class="no" aria-label="Não cumprida" aria-pressed="${i.done===false}" data-a="no" data-k="${k}" data-id="${i.id}">✕</button>
+      </span>
+      ${i.extra?`<button class="x" aria-label="Remover meta extra" data-a="rmx" data-k="${k}" data-id="${i.id}">×</button>`:''}
+    </li>`).join('') + `</ul>`;
+  }
+  h += `<form class="add" data-k="${k}"><input id="extra-${k}" placeholder="Meta extra só para este dia" maxlength="120" autocomplete="off"><button class="btn ghost" type="submit">Adicionar</button></form>`;
+  if(pend && items.length && k<=today) h += `<button class="btn ghost" data-a="rest" data-k="${k}">${pend>1?'Marcar as '+pend+' pendentes como não cumpridas':'Marcar a pendente como não cumprida'}</button>`;
+  return h + `</div>`;
+}
+
+function renderHoje(){
+  const hr = new Date().getHours();
+  const items = dayItems(today);
+  const pend = items.filter(i=>i.done===null).length;
+  let h = '';
+  if(hr >= 20 && items.length && pend){
+    h += `<div class="evening"><b>Hora do fechamento do dia</b><span>Faltam ${pend} ${pend>1?'metas':'meta'} para registrar. Marque ✓ para cumprida e ✕ para não cumprida.</span></div>`;
+  } else if(items.length && !pend && S.days[today]){
+    const p = score(today);
+    h += `<div class="evening"><b>${p===1?'Todas as metas cumpridas hoje ★':'Dia registrado'}</b><span>${p===1?'Este dia aparece em destaque dourado no calendário.':'Você cumpriu '+Math.round(p*100)+'% das metas de hoje.'}</span></div>`;
+  }
+  h += dayCard(today);
+  if(S.sel !== today) h += dayCard(S.sel);
+  $('#v-hoje').innerHTML = h;
+}
+
+function renderCal(){
+  const m = S.month, y = m.getFullYear(), mo = m.getMonth();
+  const first = new Date(y,mo,1).getDay(), n = new Date(y,mo+1,0).getDate();
+  const mn = m.toLocaleDateString('pt-BR',{month:'long'}); const label = mn.charAt(0).toUpperCase()+mn.slice(1)+' de '+y;
+  let cells = ['D','S','T','Q','Q','S','S'].map(d=>`<div class="dow">${d}</div>`).join('');
+  for(let i=0;i<first;i++) cells += `<div class="day empty"></div>`;
+  let full=0, reg=0, sum=0;
+  for(let d=1; d<=n; d++){
+    const k = y+'-'+pad(mo+1)+'-'+pad(d), p = score(k), fut = k>today;
+    if(p!==null){ reg++; sum+=p; if(p>=1) full++; }
+    const lab = p===null ? 'sem registro' : Math.round(p*100)+'% cumprido';
+    cells += `<button class="day ${level(p)} ${k===today?'today':''} ${fut?'future':''}" ${fut?'disabled':''} data-a="pick" data-k="${k}" aria-label="${d}: ${lab}">${d}</button>`;
+  }
+  // sequência de dias 100% até hoje (ou ontem, se hoje ainda não fechou)
+  let streak=0, c=new Date(); if(score(today)!==1) c.setDate(c.getDate()-1);
+  while(score(keyOf(c))===1){ streak++; c.setDate(c.getDate()-1); }
+  $('#v-cal').innerHTML = `<div class="card">
+    <div class="calhead"><button class="nav2" data-a="prev" aria-label="Mês anterior">‹</button><h2>${label}</h2><button class="nav2" data-a="next" aria-label="Próximo mês">›</button></div>
+    <div class="grid">${cells}</div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--none)"></i>sem registro</span>
+      <span><i class="sw" style="background:var(--l0)"></i>nenhuma</span>
+      <span><i class="sw" style="background:var(--l1)"></i>menos da metade</span>
+      <span><i class="sw" style="background:var(--l2)"></i>metade ou mais</span>
+      <span><i class="sw" style="background:var(--l3)"></i>todas ★</span>
+    </div></div>
+    <div class="card"><div class="stats">
+      <div class="stat"><b>${full}</b><span>dias com todas cumpridas</span></div>
+      <div class="stat"><b>${reg?Math.round(sum/reg*100):0}%</b><span>média do mês</span></div>
+      <div class="stat"><b>${streak}</b><span>sequência atual de dias ★</span></div>
+    </div></div>
+    <p class="sub" style="margin:0">Toque em um dia para ver ou corrigir o registro dele.</p>`;
+}
+
+function renderMetas(){
+  const list = S.goals.length ? `<ul class="items">`+S.goals.map(g=>`<li><span class="itxt">${esc(g.text)}</span><button class="x" aria-label="Remover meta" data-a="rmg" data-id="${g.id}">×</button></li>`).join('')+`</ul>`
+    : `<p class="sub" style="margin:0">Você ainda não tem metas fixas. Escreva a primeira abaixo ou toque em uma sugestão.</p>`;
+  const sug = SUGESTOES.filter(s=>!S.goals.some(g=>g.text===s));
+  $('#v-metas').innerHTML = `<div class="card"><h2>Metas fixas</h2><p class="sub" style="margin:0">Elas se repetem todos os dias. Alterações valem a partir de hoje; dias anteriores ficam como foram registrados.</p>
+    ${list}
+    <form class="add" data-k="__goal"><input id="newgoal" placeholder="Nova meta diária" maxlength="120" autocomplete="off"><button class="btn" type="submit">Adicionar</button></form>
+    ${sug.length?`<div class="chips">${sug.map(s=>`<button class="chip" data-a="sug" data-t="${esc(s)}">+ ${esc(s)}</button>`).join('')}</div>`:''}
+  </div>
+  <div class="card"><h2>Backup</h2><p class="sub" style="margin:0">Seus dados ficam só neste celular. Exporte de vez em quando e guarde o arquivo (no Drive, por exemplo). Para trocar de celular, importe o arquivo no novo.</p>
+    <div class="row" style="flex-wrap:wrap"><button class="btn" data-a="exp">Exportar dados</button><button class="btn ghost" data-a="imp">Importar arquivo</button></div>
+    <input type="file" id="impfile" accept="application/json,.json" hidden>
+    <p class="sub" style="margin:0">${Object.keys(S.days).length} dias registrados.</p>
+  </div>`;
+}
+
+function render(){
+  const nk = keyOf(new Date()); if(nk!==today){ if(S.sel===today) S.sel=nk; today=nk; }
+  renderRing();
+  for(const v of ['hoje','cal','metas']){
+    $('#v-'+v).hidden = S.view!==v;
+    $('#tab-'+v).setAttribute('aria-selected', S.view===v);
+  }
+  if(S.view==='hoje') renderHoje(); else if(S.view==='cal') renderCal(); else renderMetas();
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-v],[data-a]'); if(!t) return;
+  if(t.dataset.v){ S.view=t.dataset.v; if(S.view==='hoje') S.sel=today; render(); return; }
+  const a=t.dataset.a, k=t.dataset.k, id=t.dataset.id;
+  if(a==='yes') setDone(k,id,true);
+  else if(a==='no') setDone(k,id,false);
+  else if(a==='rmx') removeExtra(k,id);
+  else if(a==='rest') markRest(k);
+  else if(a==='prev'){ S.month.setMonth(S.month.getMonth()-1); render(); }
+  else if(a==='next'){ S.month.setMonth(S.month.getMonth()+1); render(); }
+  else if(a==='pick'){ S.sel=k; S.view='hoje'; render(); window.scrollTo({top:0}); }
+  else if(a==='rmg'){ S.goals=S.goals.filter(g=>g.id!==id); saveGoals(); }
+  else if(a==='exp') exportar();
+  else if(a==='imp') $('#impfile').click();
+  else if(a==='sug'){ S.goals.push({id:uid(), text:t.dataset.t}); saveGoals(); }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f=e.target, inp=f.querySelector('input'), txt=inp.value.trim(); if(!txt) return;
+  if(f.dataset.k==='__goal'){ S.goals.push({id:uid(), text:txt}); saveGoals(); setTimeout(()=>{const i=$('#newgoal'); i&&i.focus();},0); }
+  else addExtra(f.dataset.k, txt);
+});
+function exportar(){
+  const blob = new Blob([JSON.stringify({app:'metas-do-dia', versao:1, exportado:new Date().toISOString(), goals:S.goals, days:S.days}, null, 1)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'metas-do-dia-'+today+'.json';
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+document.addEventListener('change', async e => {
+  if(e.target.id!=='impfile' || !e.target.files[0]) return;
+  const st=$('#status'); st.hidden=false;
+  try{
+    const v = JSON.parse(await e.target.files[0].text());
+    if(!v || !Array.isArray(v.goals) || typeof v.days!=='object') throw 0;
+    S.goals = v.goals; S.days = v.days; persist(); render();
+    st.textContent='Dados importados: '+Object.keys(v.days).length+' dias e '+v.goals.length+' metas fixas.';
+  }catch(err){ st.textContent='Esse arquivo não parece ser um backup do Metas do Dia. Escolha o arquivo .json que você exportou.'; }
+  e.target.value='';
+});
+document.addEventListener('visibilitychange', () => { if(!document.hidden) render(); });
+if(location.hash==='#metas') S.view='metas'; else if(location.hash==='#calendario') S.view='cal';
+
+/* ---------- armazenamento local ---------- */
+function load(){
+  try{ const raw = localStorage.getItem(KEY); if(raw){ const v = JSON.parse(raw); S.goals = v.goals||[]; S.days = v.days||{}; } }catch(e){}
+  $('#status').hidden = true;
+}
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+load(); render();
+})();
+</script>
+</body>
+</html>
