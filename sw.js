@@ -1,4 +1,4 @@
-const CACHE = 'metas-do-dia-v2';
+const CACHE = 'metas-do-dia-v3';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
   'bricolage-700.woff2', 'figtree-400.woff2', 'figtree-500.woff2', 'figtree-600.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });

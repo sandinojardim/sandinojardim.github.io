@@ -101,6 +101,22 @@ form.add input{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(-
 .chart .cross{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
 .chart text.end{fill:var(--ink);font-weight:600}
 .readout{font-size:.9rem;min-height:1.4em;font-variant-numeric:tabular-nums}
+.fotopick{display:flex;align-items:center;gap:12px;grid-column:1/-1}
+.fotopick .btn{grid-column:auto}
+.fotopick img{width:56px;height:56px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.viewer{display:flex;flex-direction:column;gap:10px}
+.stage{display:grid;grid-template-columns:1fr;gap:8px}
+.stage.cmp{grid-template-columns:1fr 1fr}
+.frame{position:relative;aspect-ratio:3/4;max-width:100%;background:var(--none);border-radius:12px;overflow:hidden;min-width:0}
+.frame img{width:100%;height:100%;object-fit:contain;display:block}
+.frame .cap{position:absolute;left:0;right:0;bottom:0;padding:6px 10px;font-size:.8rem;font-variant-numeric:tabular-nums;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65))}
+.vctl{display:flex;align-items:center;gap:8px}
+.vctl input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.thumbs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.thumbs button{flex:none;width:52px;height:68px;padding:0;border:2px solid transparent;border-radius:8px;overflow:hidden;background:var(--none);cursor:pointer}
+.thumbs button[aria-current="true"]{border-color:var(--accent)}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.tagbtn{font:600 .72rem var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--accent);border:1px solid var(--line);background:transparent;border-radius:6px;padding:2px 6px;cursor:pointer}
 .readout b{font-family:var(--display)}
 .delta{font-size:.82rem;color:var(--muted)}
 table.hist{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.92rem}
@@ -302,8 +318,8 @@ function renderMetas(){
     <form class="add" data-k="__goal"><input id="newgoal" placeholder="Nova meta diária" maxlength="120" autocomplete="off"><button class="btn" type="submit">Adicionar</button></form>
     ${sug.length?`<div class="chips">${sug.map(s=>`<button class="chip" data-a="sug" data-t="${esc(s)}">+ ${esc(s)}</button>`).join('')}</div>`:''}
   </div>
-  <div class="card"><h2>Backup</h2><p class="sub" style="margin:0">Seus dados ficam só neste celular. Exporte de vez em quando e guarde o arquivo (no Drive, por exemplo). Para trocar de celular, importe o arquivo no novo.</p>
-    <div class="row" style="flex-wrap:wrap"><button class="btn" data-a="exp">Exportar dados</button><button class="btn ghost" data-a="imp">Importar arquivo</button></div>
+  <div class="card"><h2>Backup</h2><p class="sub" style="margin:0">Seus dados e fotos ficam só neste celular. Exporte de vez em quando e guarde o arquivo (no Drive, por exemplo). Para trocar de celular, importe o arquivo no novo.</p>
+    <div class="row" style="flex-wrap:wrap"><button class="btn" data-a="exp">Exportar dados</button><button class="btn ghost" data-a="expf">Exportar com fotos</button><button class="btn ghost" data-a="imp">Importar arquivo</button></div>
     <input type="file" id="impfile" accept="application/json,.json" hidden>
     <p class="sub" style="margin:0">${Object.keys(S.days).length} dias registrados e ${Object.keys(S.med).length} medições.</p>
   </div>`;
@@ -358,6 +374,76 @@ function summary(f){
   const dtxt = pts.length>1 ? `${dlt>0?'+':dlt<0?'−':''}${fmtN(Math.abs(dlt))} ${m.unit} desde ${fmtShort(first.k)}` : 'primeira medição';
   return `<div class="stat"><b>${fmtN(last.v)} <span style="font-size:.9rem">${m.unit}</span></b><span>${m.label.split(' ')[0]} em ${fmtShort(last.k)} · ${dtxt}</span></div>`;
 }
+
+/* ---------- fotos (guardadas no próprio celular, em IndexedDB) ---------- */
+let pendingFoto=null, playTimer=null;
+const urls={};
+let dbp=null;
+function idb(){
+  if(!dbp) dbp=new Promise((res,rej)=>{ const q=indexedDB.open('metas-fotos',1);
+    q.onupgradeneeded=()=>q.result.createObjectStore('fotos');
+    q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); });
+  return dbp;
+}
+async function tx(mode, fn){ const db=await idb(); return new Promise((res,rej)=>{ const t=db.transaction('fotos',mode); const r=fn(t.objectStore('fotos')); t.oncomplete=()=>res(r&&r.result); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); }
+const fotoPut=(k,b)=>tx('readwrite',st=>st.put(b,k));
+const fotoGet=k=>tx('readonly',st=>st.get(k));
+const fotoDel=k=>tx('readwrite',st=>st.delete(k));
+function dropUrl(k){ if(urls[k]){ URL.revokeObjectURL(urls[k]); delete urls[k]; } }
+async function fotoUrl(k){ if(urls[k]) return urls[k]; const b=await fotoGet(k); if(!b) return null; return urls[k]=URL.createObjectURL(b); }
+async function compress(file){
+  let bmp;
+  try{ bmp=await createImageBitmap(file,{imageOrientation:'from-image'}); }
+  catch(e){ bmp=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); }); }
+  const M=1280, w=bmp.width, h=bmp.height, sc=Math.min(1, M/Math.max(w,h));
+  const c=document.createElement('canvas'); c.width=Math.round(w*sc); c.height=Math.round(h*sc);
+  c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  return new Promise(res=>c.toBlob(res,'image/jpeg',0.82));
+}
+const fotoKeys=()=>Object.keys(S.med).filter(k=>S.med[k].foto).sort();
+function capOf(k){ const r=S.med[k]||{}; const p=[fmtShort(k)]; if(typeof r.peso==='number') p.push(fmtN(r.peso)+' kg'); if(typeof r.cintura==='number') p.push(fmtN(r.cintura)+' cm'); return p.join(' · '); }
+function fotoCard(){
+  const fk=fotoKeys();
+  if(!fk.length) return `<div class="card"><h2>Evolução em fotos</h2><p class="sub" style="margin:0">Adicione uma foto junto com as medições, de preferência sempre no mesmo lugar, posição e luz. Com duas ou mais, você pode passar por elas em sequência e comparar com a primeira.</p></div>`;
+  if(S.fotoIdx==null || S.fotoIdx>=fk.length || S.fotoIdx<0) S.fotoIdx=fk.length-1;
+  const one=fk.length===1;
+  return `<div class="card viewer"><div class="row"><h2 style="flex:1">Evolução em fotos</h2><span class="sub">${fk.length} ${one?'foto':'fotos'}</span></div>
+    <div class="stage ${S.cmp&&!one?'cmp':''}" id="stage">
+      ${S.cmp&&!one?`<div class="frame"><img id="fv-first" alt="Primeira foto"><div class="cap" id="fc-first"></div></div>`:''}
+      <div class="frame"><img id="fv-cur" alt="Foto da medição"><div class="cap" id="fc-cur"></div></div>
+    </div>
+    ${one?'':`<div class="vctl">
+      <button class="nav2" data-a="fprev" aria-label="Foto anterior">‹</button>
+      <input type="range" id="fslider" min="0" max="${fk.length-1}" value="${S.fotoIdx}" aria-label="Escolher data da foto">
+      <button class="nav2" data-a="fnext" aria-label="Próxima foto">›</button>
+    </div>
+    <div class="row" style="flex-wrap:wrap"><button class="btn" data-a="fplay" id="fplay">${playTimer?'Pausar':'Reproduzir sequência'}</button><button class="btn ghost" data-a="fcmp">${S.cmp?'Ver uma por vez':'Comparar com a primeira'}</button></div>
+    <div class="thumbs" id="thumbs">${fk.map((k,i)=>`<button data-a="fgo" data-i="${i}" aria-label="Foto de ${fmtShort(k)}" aria-current="${i===S.fotoIdx}"><img data-k="${k}" alt=""></button>`).join('')}</div>`}
+  </div>`;
+}
+async function showFoto(){
+  const fk=fotoKeys(); if(!fk.length) return;
+  const k=fk[S.fotoIdx], cur=$('#fv-cur'); if(!cur) return;
+  cur.src=await fotoUrl(k)||''; $('#fc-cur').textContent=capOf(k);
+  const fi=$('#fv-first'); if(fi){ fi.src=await fotoUrl(fk[0])||''; $('#fc-first').textContent=capOf(fk[0]); }
+  const sl=$('#fslider'); if(sl) sl.value=S.fotoIdx;
+  document.querySelectorAll('#thumbs button').forEach((b,i)=>b.setAttribute('aria-current', i===S.fotoIdx));
+  const tb=document.querySelector('#thumbs button[aria-current="true"]'); if(tb) tb.scrollIntoView({block:'nearest',inline:'center'});
+}
+async function fillFotos(){
+  await showFoto();
+  for(const im of document.querySelectorAll('#thumbs img')){ try{ im.src=await fotoUrl(im.dataset.k)||''; }catch(e){} }
+}
+function stepFoto(d){ const n=fotoKeys().length; S.fotoIdx=Math.max(0,Math.min(n-1,S.fotoIdx+d)); showFoto(); }
+function stopPlay(){ if(playTimer){ clearInterval(playTimer); playTimer=null; } const b=$('#fplay'); if(b) b.textContent='Reproduzir sequência'; }
+function togglePlay(){
+  if(playTimer){ stopPlay(); return; }
+  const n=fotoKeys().length; if(S.fotoIdx>=n-1) S.fotoIdx=0; showFoto();
+  playTimer=setInterval(()=>{ if(S.fotoIdx>=fotoKeys().length-1 || S.view!=='med'){ stopPlay(); return; } stepFoto(1); }, 900);
+  $('#fplay').textContent='Pausar';
+}
+async function blobToDataURL(b){ return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(b); }); }
+
 function renderMed(){
   const keys=Object.keys(S.med).sort().reverse();
   const sm = summary('peso')+summary('cintura');
@@ -366,26 +452,36 @@ function renderMed(){
       <label class="full" for="m-data">Data<input type="date" id="m-data" value="${today}" max="${today}" required></label>
       <label for="m-peso">Peso (kg)<input type="number" id="m-peso" inputmode="decimal" step="0.1" min="20" max="400" placeholder="ex.: 82,5"></label>
       <label for="m-cint">Circ. abdominal (cm)<input type="number" id="m-cint" inputmode="decimal" step="0.5" min="30" max="250" placeholder="ex.: 94"></label>
+      <div class="fotopick"><label class="btn ghost" for="m-foto" style="display:inline-block;color:var(--accent);font-size:.95rem">Adicionar foto</label><input type="file" id="m-foto" accept="image/*" hidden><img id="m-prev" alt="Foto escolhida" hidden><button type="button" class="x" id="m-clr" aria-label="Tirar a foto escolhida" data-a="clrfoto" hidden>×</button></div>
       <button class="btn" type="submit">Salvar medição</button>
     </form>
-    <p class="sub" style="margin:0">Pode preencher só um dos dois. Se já houver medição nessa data, ela é atualizada.</p></div>
+    <p class="sub" style="margin:0">Preencha o que quiser: peso, abdômen, foto ou tudo junto. Se já houver medição nessa data, ela é atualizada.</p></div>
     ${sm?`<div class="card"><div class="stats" style="grid-template-columns:1fr 1fr">${sm}</div></div>`:''}
     <div class="card"><h2>Peso (kg)</h2>${chartSVG('peso')}</div>
     <div class="card"><h2>Circunferência abdominal (cm)</h2>${chartSVG('cintura')}</div>
+    ${fotoCard()}
     <div class="card"><h2>Histórico</h2>${keys.length?`<div style="overflow-x:auto"><table class="hist"><thead><tr><th>Data</th><th class="n">Peso</th><th class="n">Abdômen</th><th></th></tr></thead><tbody>
-      ${keys.map(k=>{const r=S.med[k];return `<tr><td>${fmtShort(k)}</td><td class="n">${typeof r.peso==='number'?fmtN(r.peso)+' kg':'–'}</td><td class="n">${typeof r.cintura==='number'?fmtN(r.cintura)+' cm':'–'}</td><td style="text-align:right"><button class="x" aria-label="Apagar medição de ${fmtShort(k)}" data-a="rmm" data-k="${k}">×</button></td></tr>`}).join('')}
+      ${keys.map(k=>{const r=S.med[k];return `<tr><td>${fmtShort(k)}</td><td class="n">${typeof r.peso==='number'?fmtN(r.peso)+' kg':'–'}</td><td class="n">${typeof r.cintura==='number'?fmtN(r.cintura)+' cm':'–'}</td><td style="text-align:right;white-space:nowrap">${r.foto?`<button class="tagbtn" data-a="verfoto" data-k="${k}">Foto</button>`:''}<button class="x" aria-label="Apagar medição de ${fmtShort(k)}" data-a="rmm" data-k="${k}">×</button></td></tr>`}).join('')}
     </tbody></table></div>`:`<p class="sub" style="margin:0">Suas medições aparecem aqui.</p>`}</div>`;
   for(const f of ['peso','cintura']){ const svg=$('#ch-'+f); if(svg){ svg.addEventListener('pointerdown',e=>hover(f,e)); svg.addEventListener('pointermove',e=>hover(f,e)); } }
+  fillFotos();
 }
-function saveMed(){
+async function saveMed(){
   const k=$('#m-data').value, pv=parseFloat($('#m-peso').value), cv=parseFloat($('#m-cint').value);
   const st=$('#status');
   if(!k || k>today){ st.hidden=false; st.textContent='Escolha uma data até hoje.'; return; }
-  if(isNaN(pv) && isNaN(cv)){ st.hidden=false; st.textContent='Preencha o peso, a circunferência abdominal ou os dois.'; return; }
+  if(isNaN(pv) && isNaN(cv) && !pendingFoto){ st.hidden=false; st.textContent='Preencha o peso, a circunferência abdominal ou escolha uma foto.'; return; }
   const r={...(S.med[k]||{})};
   if(!isNaN(pv)) r.peso=Math.round(pv*10)/10;
   if(!isNaN(cv)) r.cintura=Math.round(cv*10)/10;
-  S.med[k]=r; st.hidden=true; persist(); render();
+  if(pendingFoto){
+    try{ await fotoPut(k, pendingFoto); dropUrl(k); r.foto=true; }
+    catch(e){ st.hidden=false; st.textContent='Não consegui guardar a foto no celular. Verifique se há espaço livre e tente de novo.'; return; }
+  }
+  pendingFoto=null;
+  S.med[k]=r; st.hidden=true; persist();
+  if(r.foto){ const fk=fotoKeys(); S.fotoIdx=fk.indexOf(k); }
+  render();
 }
 
 function render(){
@@ -413,7 +509,15 @@ document.addEventListener('click', e => {
   else if(a==='rmg'){ S.goals=S.goals.filter(g=>g.id!==id); saveGoals(); }
   else if(a==='exp') exportar();
   else if(a==='imp') $('#impfile').click();
-  else if(a==='rmm'){ delete S.med[k]; persist(); render(); }
+  else if(a==='rmm'){ const had=S.med[k]&&S.med[k].foto; delete S.med[k]; persist(); if(had){ dropUrl(k); fotoDel(k).catch(()=>{}); } stopPlay(); render(); }
+  else if(a==='clrfoto'){ pendingFoto=null; $('#m-prev').hidden=true; $('#m-clr').hidden=true; }
+  else if(a==='fprev'){ stopPlay(); stepFoto(-1); }
+  else if(a==='fnext'){ stopPlay(); stepFoto(1); }
+  else if(a==='fgo'){ stopPlay(); S.fotoIdx=+t.dataset.i; showFoto(); }
+  else if(a==='fplay') togglePlay();
+  else if(a==='fcmp'){ S.cmp=!S.cmp; stopPlay(); render(); }
+  else if(a==='verfoto'){ stopPlay(); S.fotoIdx=fotoKeys().indexOf(k); render(); const st=$('#stage'); st&&st.scrollIntoView({block:'center'}); }
+  else if(a==='expf') exportar(true);
   else if(a==='sug'){ S.goals.push({id:uid(), text:t.dataset.t}); saveGoals(); }
 });
 document.addEventListener('submit', e => {
@@ -423,23 +527,35 @@ document.addEventListener('submit', e => {
   if(f.dataset.k==='__goal'){ S.goals.push({id:uid(), text:txt}); saveGoals(); setTimeout(()=>{const i=$('#newgoal'); i&&i.focus();},0); }
   else addExtra(f.dataset.k, txt);
 });
-function exportar(){
-  const blob = new Blob([JSON.stringify({app:'metas-do-dia', versao:2, exportado:new Date().toISOString(), goals:S.goals, days:S.days, med:S.med}, null, 1)], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'metas-do-dia-'+today+'.json';
+async function exportar(comFotos){
+  const data={app:'metas-do-dia', versao:3, exportado:new Date().toISOString(), goals:S.goals, days:S.days, med:S.med};
+  if(comFotos){ data.fotos={}; for(const k of fotoKeys()){ try{ const b=await fotoGet(k); if(b) data.fotos[k]=await blobToDataURL(b); }catch(e){} } }
+  const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'metas-do-dia-'+today+(comFotos?'-com-fotos':'')+'.json';
   document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 document.addEventListener('change', async e => {
+  if(e.target.id==='fslider'){ stopPlay(); S.fotoIdx=+e.target.value; showFoto(); return; }
+  if(e.target.id==='m-foto' && e.target.files[0]){
+    const st=$('#status');
+    try{ pendingFoto=await compress(e.target.files[0]); const p=$('#m-prev'); if(p.src) URL.revokeObjectURL(p.src); p.src=URL.createObjectURL(pendingFoto); p.hidden=false; $('#m-clr').hidden=false; }
+    catch(err){ pendingFoto=null; st.hidden=false; st.textContent='Não consegui abrir essa imagem. Tente outra foto.'; }
+    e.target.value=''; return;
+  }
   if(e.target.id!=='impfile' || !e.target.files[0]) return;
   const st=$('#status'); st.hidden=false;
   try{
     const v = JSON.parse(await e.target.files[0].text());
     if(!v || !Array.isArray(v.goals) || typeof v.days!=='object') throw 0;
-    S.goals = v.goals; S.days = v.days; S.med = (v.med && typeof v.med==='object') ? v.med : {}; persist(); render();
-    st.textContent='Dados importados: '+Object.keys(v.days).length+' dias, '+v.goals.length+' metas fixas e '+Object.keys(S.med).length+' medições.';
+    S.goals = v.goals; S.days = v.days; S.med = (v.med && typeof v.med==='object') ? v.med : {};
+    let nf=0;
+    if(v.fotos && typeof v.fotos==='object'){ for(const [k,du] of Object.entries(v.fotos)){ try{ const b=await (await fetch(du)).blob(); await fotoPut(k,b); dropUrl(k); if(S.med[k]){ S.med[k].foto=true; nf++; } }catch(err){} } }
+    persist(); render();
+    st.textContent='Dados importados: '+Object.keys(v.days).length+' dias, '+v.goals.length+' metas fixas e '+Object.keys(S.med).length+' medições'+(nf?' ('+nf+' com foto)':'')+'.';
   }catch(err){ st.textContent='Esse arquivo não parece ser um backup do Metas do Dia. Escolha o arquivo .json que você exportou.'; }
   e.target.value='';
 });
-document.addEventListener('visibilitychange', () => { if(!document.hidden) render(); });
+document.addEventListener('visibilitychange', () => { if(!document.hidden && keyOf(new Date())!==today) render(); });
 if(location.hash==='#medidas') S.view='med'; else if(location.hash==='#metas') S.view='metas'; else if(location.hash==='#calendario') S.view='cal';
 
 /* ---------- armazenamento local ---------- */
