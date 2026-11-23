@@ -20,7 +20,7 @@ body{margin:0}
   --bg:#f3f5f4; --surface:#ffffff; --ink:#15211f; --muted:#5f6e6b; --line:#dde3e1;
   --accent:#1f6f62; --accent-ink:#ffffff;
   --l0:#f1d9d4; --l1:#f2e2b8; --l2:#b9dccf; --l3:#d39b1c; --l3-ink:#2a1d00; --none:#e8ecea;
-  --bad:#b4432f; --good:#1f6f62;
+  --bad:#b4432f; --good:#1f6f62; --warn-bg:#fbe9dc; --warn:#9a3d12;
   --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body:"Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -28,12 +28,12 @@ body{margin:0}
   --bg:#0f1514; --surface:#18211f; --ink:#e6eeec; --muted:#93a39f; --line:#2a3633;
   --accent:#5cc2ad; --accent-ink:#06201b;
   --l0:#4a2621; --l1:#4a3f1f; --l2:#1f4a40; --l3:#e8b23a; --l3-ink:#231700; --none:#1f2a28;
-  --bad:#e57a63; --good:#5cc2ad; color-scheme:dark }}
+  --bad:#e57a63; --good:#5cc2ad; --warn-bg:#3d2216; --warn:#f0a27a; color-scheme:dark }}
 :root[data-theme="dark"]{
   --bg:#0f1514; --surface:#18211f; --ink:#e6eeec; --muted:#93a39f; --line:#2a3633;
   --accent:#5cc2ad; --accent-ink:#06201b;
   --l0:#4a2621; --l1:#4a3f1f; --l2:#1f4a40; --l3:#e8b23a; --l3-ink:#231700; --none:#1f2a28;
-  --bad:#e57a63; --good:#5cc2ad; color-scheme:dark }
+  --bad:#e57a63; --good:#5cc2ad; --warn-bg:#3d2216; --warn:#f0a27a; color-scheme:dark }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:max(12px, env(safe-area-inset-top, 0px)) 40px}
@@ -49,8 +49,8 @@ header{display:flex;align-items:center;gap:14px}
 header .txt{flex:1;min-width:0}
 .ring{width:64px;height:64px;flex:none}
 .ring text{font-family:var(--display);font-weight:700;font-size:15px;fill:var(--ink)}
-nav{display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
-nav button{font:600 .84rem var(--body);color:var(--muted);background:transparent;border:0;border-radius:9px;padding:10px 4px;cursor:pointer}
+nav{display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+nav button{font:600 .76rem var(--body);color:var(--muted);background:transparent;border:0;border-radius:9px;padding:10px 2px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
 nav button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
@@ -117,6 +117,24 @@ form.add input{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(-
 .thumbs button[aria-current="true"]{border-color:var(--accent)}
 .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
 .tagbtn{font:600 .72rem var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--accent);border:1px solid var(--line);background:transparent;border-radius:6px;padding:2px 6px;cursor:pointer}
+.exlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.exlist>li{border-top:1px solid var(--line);padding:10px 0;display:flex;flex-direction:column;gap:8px}
+.exlist>li:first-child{border-top:0}
+.exlist>li.stag{background:var(--warn-bg);margin-inline:-16px;padding-inline:16px;border-top-color:transparent}
+.exhead{display:flex;align-items:center;gap:10px}
+.exname{flex:1;min-width:0;text-align:left;background:transparent;border:0;padding:0;color:var(--ink);font:600 1rem var(--body);cursor:pointer;overflow-wrap:anywhere}
+.exlast{display:block;font:400 .82rem var(--body);color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+.st-chip{font:600 .72rem var(--body);letter-spacing:.03em;border-radius:999px;padding:3px 8px;white-space:nowrap;flex:none}
+.st-up{background:var(--l2);color:var(--ink)}
+.st-flat{background:var(--none);color:var(--muted)}
+.st-new{background:var(--none);color:var(--muted)}
+.st-stag{background:var(--warn);color:var(--surface)}
+.exform{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end}
+.exform label{display:flex;flex-direction:column;gap:4px;font-size:.75rem;color:var(--muted);min-width:0}
+.exform input{font:inherit;font-size:1rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%;min-width:0}
+.exform .btn{grid-column:1/-1}
+.warnbox{background:var(--warn-bg);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.warnbox b{font-family:var(--display);color:var(--warn)}
 .readout b{font-family:var(--display)}
 .delta{font-size:.82rem;color:var(--muted)}
 table.hist{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.92rem}
@@ -155,6 +173,7 @@ table.hist td.n,table.hist th.n{text-align:right;padding-right:8px}
     <button role="tab" id="tab-cal" data-v="cal" aria-selected="false">Calendário</button>
     <button role="tab" id="tab-metas" data-v="metas" aria-selected="false">Metas</button>
     <button role="tab" id="tab-med" data-v="med" aria-selected="false">Medidas</button>
+    <button role="tab" id="tab-tr" data-v="tr" aria-selected="false">Treino</button>
   </nav>
 
   <div id="status" class="notice" hidden></div>
@@ -163,6 +182,7 @@ table.hist td.n,table.hist th.n{text-align:right;padding-right:8px}
   <section id="v-cal" class="wrap" style="gap:16px" hidden></section>
   <section id="v-metas" class="wrap" style="gap:16px" hidden></section>
   <section id="v-med" class="wrap" style="gap:16px" hidden></section>
+  <section id="v-tr" class="wrap" style="gap:16px" hidden></section>
 </div>
 
 <script>
@@ -175,7 +195,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const uid = () => Math.random().toString(36).slice(2,10);
 const fmtLong = d => d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
 
-const S = { goals:[], days:{}, med:{}, view:'hoje', sel:null, month:null, col:null, ready:false };
+const S = { goals:[], days:{}, med:{}, tr:{ex:[], log:{}}, exSel:null, exOpen:null, exDel:null, view:'hoje', sel:null, month:null, col:null, ready:false };
 let today = keyOf(new Date());
 S.sel = today; S.month = new Date(); S.month.setDate(1);
 
@@ -204,7 +224,7 @@ function level(p){ if(p===null) return ''; if(p>=1) return 'l3'; if(p>=.5) retur
 
 const KEY = 'metas-do-dia-v1';
 function persist(){
-  try{ localStorage.setItem(KEY, JSON.stringify({goals:S.goals, days:S.days, med:S.med})); }
+  try{ localStorage.setItem(KEY, JSON.stringify({goals:S.goals, days:S.days, med:S.med, tr:S.tr})); }
   catch(e){ $('#status').hidden=false; $('#status').textContent='Não consegui salvar no celular. Verifique se há espaço livre.'; }
 }
 function write(){ persist(); }
@@ -321,7 +341,7 @@ function renderMetas(){
   <div class="card"><h2>Backup</h2><p class="sub" style="margin:0">Seus dados e fotos ficam só neste celular. Exporte de vez em quando e guarde o arquivo (no Drive, por exemplo). Para trocar de celular, importe o arquivo no novo.</p>
     <div class="row" style="flex-wrap:wrap"><button class="btn" data-a="exp">Exportar dados</button><button class="btn ghost" data-a="expf">Exportar com fotos</button><button class="btn ghost" data-a="imp">Importar arquivo</button></div>
     <input type="file" id="impfile" accept="application/json,.json" hidden>
-    <p class="sub" style="margin:0">${Object.keys(S.days).length} dias registrados e ${Object.keys(S.med).length} medições.</p>
+    <p class="sub" style="margin:0">${Object.keys(S.days).length} dias registrados, ${Object.keys(S.med).length} medições e ${S.tr.ex.length} exercícios.</p>
   </div>`;
 }
 
@@ -337,9 +357,9 @@ function niceRange(min,max){
   const span=max-min, step=[.5,1,2,5,10,20].find(s=>span/s<=4)||50;
   return {lo:Math.floor(min/step)*step, hi:Math.ceil(max/step)*step, step};
 }
-function chartSVG(f){
-  const pts=series(f), m=MEDS[f];
-  if(pts.length<2) return `<p class="sub" style="margin:0">${pts.length? 'Registre mais uma medição para ver o gráfico.' : 'Nenhuma medição ainda.'}</p>`;
+function chartSVG(f, P, O){
+  const pts=P||series(f), m=O||MEDS[f];
+  if(pts.length<2) return `<p class="sub" style="margin:0">${pts.length? 'Registre mais uma '+(m.noun||'medição')+' para ver o gráfico.' : 'Nenhum registro ainda.'}</p>`;
   const W=340,H=170,L=38,R=40,T=12,B=24;
   const {lo,hi,step}=niceRange(Math.min(...pts.map(p=>p.v)), Math.max(...pts.map(p=>p.v)));
   const t0=pts[0].t, t1=pts[pts.length-1].t;
@@ -351,13 +371,13 @@ function chartSVG(f){
   const area=d+` L${x(t1).toFixed(1)} ${H-B} L${x(t0).toFixed(1)} ${H-B} Z`;
   const dots = pts.length<=40 ? pts.map(p=>`<circle class="pt" cx="${x(p.t)}" cy="${y(p.v)}" r="4"></circle>`).join('') : '';
   const last=pts[pts.length-1];
-  chartData[f]={pts, x, y, L, R, W, H, T, B};
+  chartData[f]={pts, x, y, L, R, W, H, T, B, fmt:m.fmt};
   return `<svg class="chart" id="ch-${f}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico de ${m.label.toLowerCase()} ao longo do tempo">
     ${g}<path class="area" d="${area}"></path><path class="ln" d="${d}"></path>${dots}
     <circle class="pt" cx="${x(last.t)}" cy="${y(last.v)}" r="5"></circle>
     <text class="end" x="${x(last.t)+8}" y="${y(last.v)+4}">${fmtN(last.v)}</text>
     <g id="hv-${f}" visibility="hidden"><line class="cross" y1="${T}" y2="${H-B}"></line><circle class="pt" r="6"></circle></g>
-  </svg><div class="readout" id="ro-${f}"><span class="sub">Toque no gráfico para ver cada medição.</span></div>`;
+  </svg><div class="readout" id="ro-${f}"><span class="sub">Toque no gráfico para ver cada ${m.noun||'medição'}.</span></div>`;
 }
 function hover(f, ev){
   const c=chartData[f], svg=$('#ch-'+f); if(!c||!svg) return;
@@ -366,7 +386,7 @@ function hover(f, ev){
   const g=$('#hv-'+f); g.setAttribute('visibility','visible');
   const ln=g.querySelector('line'), ci=g.querySelector('circle');
   ln.setAttribute('x1',c.x(best.t)); ln.setAttribute('x2',c.x(best.t)); ci.setAttribute('cx',c.x(best.t)); ci.setAttribute('cy',c.y(best.v));
-  $('#ro-'+f).innerHTML = `${esc(fmtLong(parseKey(best.k)))}: <b>${fmtN(best.v)} ${MEDS[f].unit}</b>`;
+  $('#ro-'+f).innerHTML = `${esc(fmtLong(parseKey(best.k)))}: <b>${c.fmt?c.fmt(best):fmtN(best.v)+' '+MEDS[f].unit}</b>`;
 }
 function summary(f){
   const pts=series(f), m=MEDS[f]; if(!pts.length) return '';
@@ -444,6 +464,93 @@ function togglePlay(){
 }
 async function blobToDataURL(b){ return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(b); }); }
 
+
+/* ---------- treino (musculação) ---------- */
+const kgFmt = v => fmtN(v, Number.isInteger(v)?0:1);
+function exLog(id){ return (S.tr.log[id]||[]).slice().sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0); }
+// Uma sessão é recorde quando supera tudo antes dela: mais peso, ou o mesmo peso maior com mais repetições.
+function exStatus(id){
+  const L=exLog(id); const n=L.length;
+  if(!n) return {code:'none', since:0, L};
+  let bestKg=-1, bestReps=-1, lastPR=0;
+  L.forEach((e,i)=>{ if(e.kg>bestKg || (e.kg===bestKg && e.reps>bestReps)){ bestKg=e.kg; bestReps=e.reps; lastPR=i; } });
+  const since=n-1-lastPR;
+  let code = n<2 ? 'new' : since===0 ? 'up' : since>=3 ? 'stag' : 'flat';
+  return {code, since, L, best:{kg:bestKg, reps:bestReps, d:L[lastPR].d}};
+}
+const CHIP = {
+  new:  ['st-new','Começando'],
+  up:   ['st-up','↑ Evoluiu'],
+  flat: ['st-flat','Sem evolução'],
+  stag: ['st-stag','⚠ Estagnado'],
+  none: ['st-new','Sem registro']
+};
+function chipOf(st){ const [c,t]=CHIP[st.code]; const extra = st.code==='flat' ? ` há ${st.since} ${st.since>1?'sessões':'sessão'}` : st.code==='stag' ? ` · ${st.since} sessões` : ''; return `<span class="st-chip ${c}">${t}${extra}</span>`; }
+function exForm(id){
+  const L=exLog(id), last=L[L.length-1]||{}, todayE=L.find(e=>e.d===today);
+  const kg=todayE?todayE.kg:(last.kg??''), reps=todayE?todayE.reps:(last.reps??'');
+  return `<form class="exform" data-ex="${id}">
+    <label for="ex-kg-${id}">Peso (kg)<input type="number" id="ex-kg-${id}" inputmode="decimal" step="any" min="0" max="999" value="${kg}" required></label>
+    <label for="ex-rp-${id}">Repetições<input type="number" id="ex-rp-${id}" inputmode="numeric" step="1" min="1" max="200" value="${reps}" required></label>
+    <label for="ex-dt-${id}">Data<input type="date" id="ex-dt-${id}" value="${today}" max="${today}" required></label>
+    <button class="btn" type="submit">${todayE?'Atualizar registro de hoje':'Salvar'}</button>
+  </form>`;
+}
+function renderTr(){
+  const box=$('#v-tr');
+  if(S.exSel){ renderExDetail(); return; }
+  const items=S.tr.ex.map(e=>({e, st:exStatus(e.id)}));
+  const order={stag:0, flat:1, up:2, new:3, none:4};
+  items.sort((a,b)=>order[a.st.code]-order[b.st.code] || a.e.nome.localeCompare(b.e.nome,'pt-BR'));
+  const stag=items.filter(i=>i.st.code==='stag');
+  let h='';
+  if(stag.length) h+=`<div class="warnbox"><b>${stag.length===1?'1 exercício estagnado':stag.length+' exercícios estagnados'}</b><span>${stag.map(i=>esc(i.e.nome)).join(', ')}: sem aumento de peso nem de repetições nas últimas 3 sessões ou mais.</span></div>`;
+  h+=`<div class="card"><div class="row"><h2 style="flex:1">Exercícios</h2><span class="sub">${S.tr.ex.length}</span></div>`;
+  if(!items.length) h+=`<p class="sub" style="margin:0">Cadastre seus exercícios abaixo. Em cada treino, toque em <b>Registrar</b> e anote o peso e as repetições da série principal.</p>`;
+  else h+=`<ul class="exlist">`+items.map(({e,st})=>{
+    const last=st.L[st.L.length-1];
+    const open=S.exOpen===e.id, del=S.exDel===e.id;
+    return `<li class="${st.code==='stag'?'stag':''}">
+      <div class="exhead">
+        <button class="exname" data-a="exsel" data-id="${e.id}">${esc(e.nome)}<span class="exlast">${last?`${kgFmt(last.kg)} kg × ${last.reps} em ${fmtShort(last.d)}`:'ainda sem registro'}</span></button>
+        ${chipOf(st)}
+      </div>
+      ${del?`<div class="row" style="flex-wrap:wrap"><span class="sub" style="flex:1">Apagar ${esc(e.nome)} e todo o histórico?</span><button class="btn" style="background:var(--bad);border-color:var(--bad);color:#fff" data-a="exdelok" data-id="${e.id}">Apagar</button><button class="btn ghost" data-a="exdelno">Cancelar</button></div>`:''}
+      ${open?exForm(e.id):`<div class="row"><button class="btn ghost" style="flex:1" data-a="exopen" data-id="${e.id}">Registrar</button><button class="x" aria-label="Apagar exercício" data-a="exdel" data-id="${e.id}">×</button></div>`}
+    </li>`;}).join('')+`</ul>`;
+  h+=`<form class="add" id="exadd"><input id="newex" placeholder="Novo exercício (ex.: Supino reto)" maxlength="60" autocomplete="off"><button class="btn" type="submit">Adicionar</button></form></div>`;
+  h+=`<p class="sub" style="margin:0">Conta como evolução: mais peso, ou o mesmo peso com mais repetições. O exercício fica em destaque quando passa 3 sessões sem nenhum dos dois.</p>`;
+  box.innerHTML=h;
+}
+function renderExDetail(){
+  const e=S.tr.ex.find(x=>x.id===S.exSel); if(!e){ S.exSel=null; renderTr(); return; }
+  const st=exStatus(e.id), L=st.L;
+  const pts=L.map(r=>({k:r.d, t:parseKey(r.d).getTime(), v:r.kg, reps:r.reps}));
+  const first=L[0];
+  let h=`<div class="row"><button class="btn ghost" data-a="exback">‹ Exercícios</button></div>`;
+  h+=`<div class="card"><div class="exhead"><h2 style="flex:1">${esc(e.nome)}</h2>${chipOf(st)}</div>`;
+  if(L.length) h+=`<div class="stats" style="grid-template-columns:1fr 1fr">
+      <div class="stat"><b>${kgFmt(st.best.kg)} kg × ${st.best.reps}</b><span>melhor marca, em ${fmtShort(st.best.d)}</span></div>
+      <div class="stat"><b>${L.length>1?(st.best.kg-first.kg>=0?'+':'−')+kgFmt(Math.abs(st.best.kg-first.kg))+' kg':'–'}</b><span>${L.length>1?'desde o primeiro registro ('+fmtShort(first.d)+')':'registre mais sessões'}</span></div>
+    </div>`;
+  if(st.code==='stag') h+=`<div class="warnbox"><b>Estagnado há ${st.since} sessões</b><span>Desde ${fmtShort(st.best.d)} você não superou ${kgFmt(st.best.kg)} kg × ${st.best.reps}.</span></div>`;
+  h+=exForm(e.id)+`</div>`;
+  h+=`<div class="card"><h2>Peso (kg)</h2>${chartSVG('ex', pts, {label:'Peso', unit:'kg', noun:'sessão', fmt:p=>kgFmt(p.v)+' kg × '+p.reps+' repetições'})}</div>`;
+  h+=`<div class="card"><h2>Histórico</h2>${L.length?`<div style="overflow-x:auto"><table class="hist"><thead><tr><th>Data</th><th class="n">Peso</th><th class="n">Reps</th><th></th></tr></thead><tbody>
+    ${L.slice().reverse().map(r=>`<tr><td>${fmtShort(r.d)}</td><td class="n">${kgFmt(r.kg)} kg</td><td class="n">${r.reps}</td><td style="text-align:right"><button class="x" aria-label="Apagar registro de ${fmtShort(r.d)}" data-a="exrm" data-k="${r.d}">×</button></td></tr>`).join('')}
+    </tbody></table></div>`:`<p class="sub" style="margin:0">Nenhuma sessão registrada ainda.</p>`}</div>`;
+  $('#v-tr').innerHTML=h;
+  const svg=$('#ch-ex'); if(svg){ svg.addEventListener('pointerdown',ev=>hover('ex',ev)); svg.addEventListener('pointermove',ev=>hover('ex',ev)); }
+}
+function saveEx(id){
+  const kg=parseFloat($('#ex-kg-'+id).value), reps=parseInt($('#ex-rp-'+id).value,10), d=$('#ex-dt-'+id).value;
+  const st=$('#status');
+  if(isNaN(kg)||kg<0||isNaN(reps)||reps<1){ st.hidden=false; st.textContent='Preencha o peso e as repetições.'; return; }
+  if(!d||d>today){ st.hidden=false; st.textContent='Escolha uma data até hoje.'; return; }
+  const L=(S.tr.log[id]||[]).filter(e=>e.d!==d); L.push({d, kg:Math.round(kg*10)/10, reps});
+  S.tr.log[id]=L; st.hidden=true; if(!S.exSel) S.exOpen=null; persist(); render();
+}
+
 function renderMed(){
   const keys=Object.keys(S.med).sort().reverse();
   const sm = summary('peso')+summary('cintura');
@@ -487,17 +594,17 @@ async function saveMed(){
 function render(){
   const nk = keyOf(new Date()); if(nk!==today){ if(S.sel===today) S.sel=nk; today=nk; }
   renderRing();
-  for(const v of ['hoje','cal','metas','med']){
+  for(const v of ['hoje','cal','metas','med','tr']){
     $('#v-'+v).hidden = S.view!==v;
     $('#tab-'+v).setAttribute('aria-selected', S.view===v);
   }
-  if(S.view==='hoje') renderHoje(); else if(S.view==='cal') renderCal(); else if(S.view==='med') renderMed(); else renderMetas();
+  if(S.view==='hoje') renderHoje(); else if(S.view==='cal') renderCal(); else if(S.view==='med') renderMed(); else if(S.view==='tr') renderTr(); else renderMetas();
 }
 
 /* ---------- eventos ---------- */
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-v],[data-a]'); if(!t) return;
-  if(t.dataset.v){ S.view=t.dataset.v; if(S.view==='hoje') S.sel=today; render(); return; }
+  if(t.dataset.v){ S.view=t.dataset.v; if(S.view==='hoje') S.sel=today; if(S.view==='tr'){ S.exSel=null; S.exOpen=null; S.exDel=null; } render(); return; }
   const a=t.dataset.a, k=t.dataset.k, id=t.dataset.id;
   if(a==='yes') setDone(k,id,true);
   else if(a==='no') setDone(k,id,false);
@@ -518,17 +625,26 @@ document.addEventListener('click', e => {
   else if(a==='fcmp'){ S.cmp=!S.cmp; stopPlay(); render(); }
   else if(a==='verfoto'){ stopPlay(); S.fotoIdx=fotoKeys().indexOf(k); render(); const st=$('#stage'); st&&st.scrollIntoView({block:'center'}); }
   else if(a==='expf') exportar(true);
+  else if(a==='exopen'){ S.exOpen=id; S.exDel=null; render(); const i=$('#ex-kg-'+id); i&&i.focus(); }
+  else if(a==='exsel'){ S.exSel=id; S.exOpen=null; S.exDel=null; render(); window.scrollTo({top:0}); }
+  else if(a==='exback'){ S.exSel=null; render(); }
+  else if(a==='exdel'){ S.exDel=id; S.exOpen=null; render(); }
+  else if(a==='exdelno'){ S.exDel=null; render(); }
+  else if(a==='exdelok'){ S.tr.ex=S.tr.ex.filter(x=>x.id!==id); delete S.tr.log[id]; S.exDel=null; persist(); render(); }
+  else if(a==='exrm'){ S.tr.log[S.exSel]=(S.tr.log[S.exSel]||[]).filter(r=>r.d!==k); persist(); render(); }
   else if(a==='sug'){ S.goals.push({id:uid(), text:t.dataset.t}); saveGoals(); }
 });
 document.addEventListener('submit', e => {
   e.preventDefault();
   if(e.target.id==='medform'){ saveMed(); return; }
+  if(e.target.dataset.ex){ saveEx(e.target.dataset.ex); return; }
+  if(e.target.id==='exadd'){ const n=$('#newex').value.trim(); if(n){ S.tr.ex.push({id:uid(), nome:n}); persist(); render(); setTimeout(()=>{const i=$('#newex'); i&&i.focus();},0); } return; }
   const f=e.target, inp=f.querySelector('input'), txt=inp.value.trim(); if(!txt) return;
   if(f.dataset.k==='__goal'){ S.goals.push({id:uid(), text:txt}); saveGoals(); setTimeout(()=>{const i=$('#newgoal'); i&&i.focus();},0); }
   else addExtra(f.dataset.k, txt);
 });
 async function exportar(comFotos){
-  const data={app:'metas-do-dia', versao:3, exportado:new Date().toISOString(), goals:S.goals, days:S.days, med:S.med};
+  const data={app:'metas-do-dia', versao:4, exportado:new Date().toISOString(), goals:S.goals, days:S.days, med:S.med, tr:S.tr};
   if(comFotos){ data.fotos={}; for(const k of fotoKeys()){ try{ const b=await fotoGet(k); if(b) data.fotos[k]=await blobToDataURL(b); }catch(e){} } }
   const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'metas-do-dia-'+today+(comFotos?'-com-fotos':'')+'.json';
@@ -547,20 +663,20 @@ document.addEventListener('change', async e => {
   try{
     const v = JSON.parse(await e.target.files[0].text());
     if(!v || !Array.isArray(v.goals) || typeof v.days!=='object') throw 0;
-    S.goals = v.goals; S.days = v.days; S.med = (v.med && typeof v.med==='object') ? v.med : {};
+    S.goals = v.goals; S.days = v.days; S.med = (v.med && typeof v.med==='object') ? v.med : {}; S.tr = (v.tr && Array.isArray(v.tr.ex)) ? {ex:v.tr.ex, log:v.tr.log||{}} : {ex:[], log:{}};
     let nf=0;
     if(v.fotos && typeof v.fotos==='object'){ for(const [k,du] of Object.entries(v.fotos)){ try{ const b=await (await fetch(du)).blob(); await fotoPut(k,b); dropUrl(k); if(S.med[k]){ S.med[k].foto=true; nf++; } }catch(err){} } }
     persist(); render();
-    st.textContent='Dados importados: '+Object.keys(v.days).length+' dias, '+v.goals.length+' metas fixas e '+Object.keys(S.med).length+' medições'+(nf?' ('+nf+' com foto)':'')+'.';
+    st.textContent='Dados importados: '+Object.keys(v.days).length+' dias, '+v.goals.length+' metas fixas e '+Object.keys(S.med).length+' medições'+(nf?' ('+nf+' com foto)':'')+' e '+S.tr.ex.length+' exercícios.';
   }catch(err){ st.textContent='Esse arquivo não parece ser um backup do Metas do Dia. Escolha o arquivo .json que você exportou.'; }
   e.target.value='';
 });
 document.addEventListener('visibilitychange', () => { if(!document.hidden && keyOf(new Date())!==today) render(); });
-if(location.hash==='#medidas') S.view='med'; else if(location.hash==='#metas') S.view='metas'; else if(location.hash==='#calendario') S.view='cal';
+if(location.hash==='#treino') S.view='tr'; else if(location.hash==='#medidas') S.view='med'; else if(location.hash==='#metas') S.view='metas'; else if(location.hash==='#calendario') S.view='cal';
 
 /* ---------- armazenamento local ---------- */
 function load(){
-  try{ const raw = localStorage.getItem(KEY); if(raw){ const v = JSON.parse(raw); S.goals = v.goals||[]; S.days = v.days||{}; S.med = v.med||{}; } }catch(e){}
+  try{ const raw = localStorage.getItem(KEY); if(raw){ const v = JSON.parse(raw); S.goals = v.goals||[]; S.days = v.days||{}; S.med = v.med||{}; if(v.tr&&Array.isArray(v.tr.ex)) S.tr={ex:v.tr.ex, log:v.tr.log||{}}; } }catch(e){}
   $('#status').hidden = true;
 }
 if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
