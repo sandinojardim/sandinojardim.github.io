@@ -160,8 +160,6 @@ table.hist td.n,table.hist th.n{text-align:right;padding-right:8px}
 .memlabel{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
 form.exadd{display:flex;flex-direction:column;gap:8px}
 form.exadd input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
-.row.exops{flex-wrap:nowrap}
-.exops .catsel{flex:1 1 auto;width:auto;min-width:0;padding:8px 6px}
 </style>
 </head>
 <body>
@@ -623,7 +621,7 @@ function exItems(list){
         ${chipOf(st)}
       </div>
       ${del?`<div class="row" style="flex-wrap:wrap"><span class="sub" style="flex:1">Apagar ${esc(e.nome)} e todo o histórico?</span><button class="btn" style="background:var(--bad);border-color:var(--bad);color:#fff" data-a="exdelok" data-id="${e.id}">Apagar</button><button class="btn ghost" data-a="exdelno">Cancelar</button></div>`:''}
-      ${open?exForm(e.id):`<div class="row exops">${catSelect(e)}<button class="btn ghost" data-a="exopen" data-id="${e.id}">Registrar</button><button class="x" aria-label="Apagar exercício" data-a="exdel" data-id="${e.id}">×</button></div>`}
+      ${open?exForm(e.id):`<div class="row"><button class="btn ghost" style="flex:1" data-a="exopen" data-id="${e.id}">Registrar</button><button class="x" aria-label="Apagar exercício" data-a="exdel" data-id="${e.id}">×</button></div>`}
     </li>`;
   }).join('');
 }
