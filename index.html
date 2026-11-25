@@ -43,7 +43,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16p
 .card .btn{white-space:normal}
 h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
 h1{font-size:1.6rem;font-weight:700;letter-spacing:-.01em}
-h2{font-size:1.15rem;font-weight:700}
+h2{font-size:1.15rem;font-weight:700;overflow-wrap:anywhere}
 .sub{color:var(--muted);font-size:.9rem}
 header{display:flex;align-items:center;gap:14px}
 header .txt{flex:1;min-width:0}
@@ -129,7 +129,8 @@ form.add input{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(-
 .st-flat{background:var(--none);color:var(--muted)}
 .st-new{background:var(--none);color:var(--muted)}
 .st-stag{background:var(--warn);color:var(--surface)}
-.exform{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end}
+.exform{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}
+.exform label:nth-child(3){grid-column:1/-1}
 .exform label{display:flex;flex-direction:column;gap:4px;font-size:.75rem;color:var(--muted);min-width:0}
 .exform input{font:inherit;font-size:1rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%;min-width:0}
 .exform .btn{grid-column:1/-1}
@@ -151,6 +152,16 @@ table.hist td.n,table.hist th.n{text-align:right;padding-right:8px}
 .bar{height:8px;border-radius:99px;background:var(--none);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
 @media (prefers-reduced-motion: reduce){.bar i{transition:none}}
+.filters{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.filters::-webkit-scrollbar{height:0}
+.filters .chip{flex:none;scroll-snap-align:start;border-style:solid;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.catsel{font:inherit;font-size:1rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+.memlabel{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
+form.exadd{display:flex;flex-direction:column;gap:8px}
+form.exadd input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+.row.exops{flex-wrap:nowrap}
+.exops .catsel{flex:1 1 auto;width:auto;min-width:0;padding:8px 6px}
 </style>
 </head>
 <body>
@@ -195,7 +206,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const uid = () => Math.random().toString(36).slice(2,10);
 const fmtLong = d => d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
 
-const S = { goals:[], days:{}, med:{}, tr:{ex:[], log:{}}, exSel:null, exOpen:null, exDel:null, view:'hoje', sel:null, month:null, col:null, ready:false };
+const S = { goals:[], days:{}, med:{}, tr:{ex:[], log:{}}, exSel:null, exOpen:null, exDel:null, trFiltro:'todos', catRen:null, catDel:null, view:'hoje', sel:null, month:null, col:null, ready:false };
 let today = keyOf(new Date());
 S.sel = today; S.month = new Date(); S.month.setDate(1);
 
@@ -223,8 +234,9 @@ function score(k){
 function level(p){ if(p===null) return ''; if(p>=1) return 'l3'; if(p>=.5) return 'l2'; if(p>0) return 'l1'; return 'l0'; }
 
 const KEY = 'metas-do-dia-v1';
+const VERSAO = 5;
 function persist(){
-  try{ localStorage.setItem(KEY, JSON.stringify({goals:S.goals, days:S.days, med:S.med, tr:S.tr})); }
+  try{ localStorage.setItem(KEY, JSON.stringify({versao:VERSAO, goals:S.goals, days:S.days, med:S.med, tr:S.tr})); }
   catch(e){ $('#status').hidden=false; $('#status').textContent='Não consegui salvar no celular. Verifique se há espaço livre.'; }
 }
 function write(){ persist(); }
@@ -466,8 +478,113 @@ async function blobToDataURL(b){ return new Promise(res=>{ const r=new FileReade
 
 
 /* ---------- treino (musculação) ---------- */
+const CATS_PADRAO = [
+  {id:'peito', nome:'Peito'},
+  {id:'costas', nome:'Costas'},
+  {id:'ombros', nome:'Ombros'},
+  {id:'biceps', nome:'Bíceps'},
+  {id:'triceps', nome:'Tríceps'},
+  {id:'pernas', nome:'Pernas'},
+  {id:'abdomen', nome:'Abdômen'},
+  {id:'sem', nome:'Sem categoria'}
+];
+// Frases já sem acento. A mais longa ganha, para "crucifixo inverso" não cair em peito.
+const REGRAS_MEMBRO = [
+  ['ombros','crucifixo inverso'],['ombros','crucifixo invertido'],['ombros','elevacao lateral'],['ombros','elevacao frontal'],
+  ['ombros','face pull'],['ombros','desenvolvimento'],['ombros','encolhimento'],['ombros','ombro'],['ombros','arnold'],
+  ['pernas','cadeira extensora'],['pernas','mesa flexora'],['pernas','leg press'],['pernas','hip thrust'],['pernas','agachamento'],
+  ['pernas','extensora'],['pernas','flexora'],['pernas','panturrilha'],['pernas','afundo'],['pernas','avanco'],['pernas','stiff'],
+  ['pernas','adutor'],['pernas','abdutor'],['pernas','gluteo'],['pernas','quadriceps'],['pernas','posterior'],['pernas','gemeo'],
+  ['pernas','perna'],['pernas','hack'],['pernas','leg'],
+  ['costas','levantamento terra'],['costas','barra fixa'],['costas','pull down'],['costas','pulldown'],['costas','remada'],
+  ['costas','puxada'],['costas','serrote'],['costas','dorsal'],['costas','costas'],['costas','lombar'],
+  ['peito','cross over'],['peito','crossover'],['peito','peck deck'],['peito','pec deck'],['peito','chest press'],
+  ['peito','supino'],['peito','voador'],['peito','crucifixo'],['peito','flexao'],['peito','peito'],
+  ['triceps','triceps'],['triceps','frances'],['triceps','testa'],['triceps','coice'],['triceps','mergulho'],['triceps','paralela'],
+  ['biceps','biceps'],['biceps','rosca'],['biceps','martelo'],['biceps','scott'],
+  ['abdomen','abdominal'],['abdomen','abdomen'],['abdomen','prancha'],['abdomen','obliquo'],['abdomen','crunch']
+];
+function norm(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+}
+function tokenHas(n, phrase){
+  if(phrase.includes(' ')) return n.includes(phrase);
+  return n.split(' ').some(w => w===phrase || (phrase.length>=5 && w.startsWith(phrase)));
+}
+function guessCat(nome){
+  const n=norm(nome);
+  if(!n) return 'sem';
+  const rules=REGRAS_MEMBRO.map(([c,p])=>[c,norm(p)]).filter(([,p])=>p).sort((a,b)=>b[1].length-a[1].length);
+  for(const [cat,phrase] of rules) if(tokenHas(n, phrase)) return cat;
+  return 'sem';
+}
+function freshId(){
+  let id;
+  do { id=uid(); }
+  while((S.tr&&S.tr.cats||[]).some(c=>c.id===id) || (S.tr&&S.tr.ex||[]).some(e=>e.id===id) || (S.goals||[]).some(g=>g.id===id));
+  return id;
+}
+function nomePadrao(id){ const c=CATS_PADRAO.find(x=>x.id===id); return c?c.nome:''; }
+// Idempotente: só preenche o membro quando o exercício ainda não tem. Não remove exercício nem registro.
+function migrateTr(tr){
+  const src=(tr && typeof tr==='object' && !Array.isArray(tr)) ? tr : {};
+  let cats=Array.isArray(src.cats) ? src.cats.filter(c=>c && typeof c==='object' && c.id!=null && c.nome!=null).map(c=>({id:String(c.id), nome:String(c.nome).trim()})).filter(c=>c.id && c.nome) : [];
+  if(!cats.length) cats=CATS_PADRAO.map(c=>({id:c.id, nome:c.nome}));
+  const seen=new Set();
+  cats=cats.filter(c=>{ if(seen.has(c.id)) return false; seen.add(c.id); return true; });
+  if(!cats.some(c=>c.id==='sem')) cats.push({id:'sem', nome:'Sem categoria'});
+  const ids=()=>new Set(cats.map(c=>c.id));
+  const ensureCat=id=>{
+    if(ids().has(id)) return;
+    const padrao=nomePadrao(id);
+    let nome=padrao;
+    if(!nome){
+      const n=cats.filter(c=>c.nome==='Membro recuperado' || c.nome.startsWith('Membro recuperado ')).length;
+      nome=n ? 'Membro recuperado '+(n+1) : 'Membro recuperado';
+    }
+    const item={id, nome};
+    const semI=cats.findIndex(c=>c.id==='sem');
+    if(semI<0) cats.push(item); else cats.splice(semI,0,item);
+  };
+  const exIn=Array.isArray(src.ex)?src.ex:[];
+  const ex=[];
+  for(const e of exIn){
+    if(!e || typeof e!=='object') continue;
+    const id=e.id!=null && String(e.id) ? String(e.id) : freshId();
+    const nome=typeof e.nome==='string' ? e.nome : '';
+    let cat=e.cat==null ? '' : String(e.cat).trim();
+    if(!cat){
+      const g=guessCat(nome);
+      cat=ids().has(g) ? g : 'sem';
+    }
+    ensureCat(cat);
+    ex.push({...e, id, nome, cat});
+  }
+  const log={};
+  const logIn=(src.log && typeof src.log==='object' && !Array.isArray(src.log)) ? src.log : {};
+  for(const id of Object.keys(logIn)){
+    const v=logIn[id];
+    log[id]=Array.isArray(v) ? v.map(en=>en && typeof en==='object' ? {...en} : en) : v;
+    if(!ex.some(e=>e.id===id) && Array.isArray(v) && v.length){
+      ensureCat('sem');
+      ex.push({id:String(id), nome:'Exercício recuperado', cat:'sem'});
+    }
+  }
+  return {cats, ex, log};
+}
+function catsOrdenadas(){
+  const cats=(S.tr&&S.tr.cats)||[];
+  return cats.filter(c=>c.id!=='sem').concat(cats.filter(c=>c.id==='sem'));
+}
+function catNome(id){ const c=(S.tr.cats||[]).find(x=>x.id===id); return c?c.nome:'Sem categoria'; }
+function catOptions(sel){
+  return catsOrdenadas().map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.nome)}</option>`).join('');
+}
+function catSelect(ex){
+  return `<select class="catsel" data-excat="${esc(ex.id)}" aria-label="Membro de ${esc(ex.nome)}">${catOptions(ex.cat)}</select>`;
+}
 const kgFmt = v => fmtN(v, Number.isInteger(v)?0:1);
-function exLog(id){ return (S.tr.log[id]||[]).slice().sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0); }
+function exLog(id){ const L=S.tr.log[id]; return (Array.isArray(L)?L:[]).slice().sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0); }
 // Uma sessão é recorde quando supera tudo antes dela: mais peso, ou o mesmo peso maior com mais repetições.
 function exStatus(id){
   const L=exLog(id); const n=L.length;
@@ -496,18 +613,8 @@ function exForm(id){
     <button class="btn" type="submit">${todayE?'Atualizar registro de hoje':'Salvar'}</button>
   </form>`;
 }
-function renderTr(){
-  const box=$('#v-tr');
-  if(S.exSel){ renderExDetail(); return; }
-  const items=S.tr.ex.map(e=>({e, st:exStatus(e.id)}));
-  const order={stag:0, flat:1, up:2, new:3, none:4};
-  items.sort((a,b)=>order[a.st.code]-order[b.st.code] || a.e.nome.localeCompare(b.e.nome,'pt-BR'));
-  const stag=items.filter(i=>i.st.code==='stag');
-  let h='';
-  if(stag.length) h+=`<div class="warnbox"><b>${stag.length===1?'1 exercício estagnado':stag.length+' exercícios estagnados'}</b><span>${stag.map(i=>esc(i.e.nome)).join(', ')}: sem aumento de peso nem de repetições nas últimas 3 sessões ou mais.</span></div>`;
-  h+=`<div class="card"><div class="row"><h2 style="flex:1">Exercícios</h2><span class="sub">${S.tr.ex.length}</span></div>`;
-  if(!items.length) h+=`<p class="sub" style="margin:0">Cadastre seus exercícios abaixo. Em cada treino, toque em <b>Registrar</b> e anote o peso e as repetições da série principal.</p>`;
-  else h+=`<ul class="exlist">`+items.map(({e,st})=>{
+function exItems(list){
+  return list.map(({e,st})=>{
     const last=st.L[st.L.length-1];
     const open=S.exOpen===e.id, del=S.exDel===e.id;
     return `<li class="${st.code==='stag'?'stag':''}">
@@ -516,11 +623,60 @@ function renderTr(){
         ${chipOf(st)}
       </div>
       ${del?`<div class="row" style="flex-wrap:wrap"><span class="sub" style="flex:1">Apagar ${esc(e.nome)} e todo o histórico?</span><button class="btn" style="background:var(--bad);border-color:var(--bad);color:#fff" data-a="exdelok" data-id="${e.id}">Apagar</button><button class="btn ghost" data-a="exdelno">Cancelar</button></div>`:''}
-      ${open?exForm(e.id):`<div class="row"><button class="btn ghost" style="flex:1" data-a="exopen" data-id="${e.id}">Registrar</button><button class="x" aria-label="Apagar exercício" data-a="exdel" data-id="${e.id}">×</button></div>`}
-    </li>`;}).join('')+`</ul>`;
-  h+=`<form class="add" id="exadd"><input id="newex" placeholder="Novo exercício (ex.: Supino reto)" maxlength="60" autocomplete="off"><button class="btn" type="submit">Adicionar</button></form></div>`;
-  h+=`<p class="sub" style="margin:0">Conta como evolução: mais peso, ou o mesmo peso com mais repetições. O exercício fica em destaque quando passa 3 sessões sem nenhum dos dois.</p>`;
+      ${open?exForm(e.id):`<div class="row exops">${catSelect(e)}<button class="btn ghost" data-a="exopen" data-id="${e.id}">Registrar</button><button class="x" aria-label="Apagar exercício" data-a="exdel" data-id="${e.id}">×</button></div>`}
+    </li>`;
+  }).join('');
+}
+function catManage(){
+  const cats=catsOrdenadas();
+  const rows=cats.map(c=>{
+    const n=S.tr.ex.filter(e=>e.cat===c.id).length;
+    if(S.catRen===c.id){
+      return `<li><form class="add" data-catren="${esc(c.id)}" style="flex:1;min-width:0"><input aria-label="Novo nome do membro" maxlength="40" value="${esc(c.nome)}" required autocomplete="off"><button class="btn" type="submit">Salvar</button><button class="btn ghost" type="button" data-a="catrenno">Cancelar</button></form></li>`;
+    }
+    return `<li><span class="itxt">${esc(c.nome)}<span class="tag">${n}</span></span><button type="button" class="tagbtn" data-a="catren" data-id="${esc(c.id)}">Renomear</button>${c.id==='sem'?'':`<button type="button" class="x" aria-label="Apagar ${esc(c.nome)}" data-a="catdel" data-id="${esc(c.id)}">×</button>`}</li>`;
+  }).join('');
+  const del=S.tr.cats.find(c=>c.id===S.catDel && c.id!=='sem');
+  const delN=del?S.tr.ex.filter(e=>e.cat===del.id).length:0;
+  const semNome=catNome('sem');
+  const delBox=del?`<div class="row" style="flex-wrap:wrap"><span class="sub" style="flex:1">Apagar ${esc(del.nome)}? ${delN?(delN>1?delN+' exercícios vão para ':delN+' exercício vai para ')+esc(semNome)+'.':'Nenhum exercício está nele.'}</span><button type="button" class="btn" style="background:var(--bad);border-color:var(--bad);color:#fff" data-a="catdelok" data-id="${esc(del.id)}">Apagar</button><button type="button" class="btn ghost" data-a="catdelno">Cancelar</button></div>`:'';
+  return `<div class="card"><h2>Membros</h2><p class="sub" style="margin:0">Separe os exercícios por grupo muscular. Você pode renomear estes membros ou criar outros.</p><ul class="items">${rows}</ul>${delBox}<form class="add" id="catadd"><input id="newcat" placeholder="Novo membro (ex.: Antebraço)" maxlength="40" autocomplete="off"><button class="btn ghost" type="submit">Criar</button></form></div>`;
+}
+function renderTr(){
+  const box=$('#v-tr');
+  if(!S.tr || !Array.isArray(S.tr.cats)) S.tr=migrateTr(S.tr);
+  if(S.exSel){ renderExDetail(); return; }
+  const cats=catsOrdenadas();
+  if(S.trFiltro!=='todos' && !cats.some(c=>c.id===S.trFiltro)) S.trFiltro='todos';
+  const items=S.tr.ex.map(e=>({e, st:exStatus(e.id)}));
+  const order={stag:0, flat:1, up:2, new:3, none:4};
+  items.sort((a,b)=>order[a.st.code]-order[b.st.code] || a.e.nome.localeCompare(b.e.nome,'pt-BR'));
+  const stag=items.filter(i=>i.st.code==='stag');
+  let h='';
+  if(stag.length) h+=`<div class="warnbox"><b>${stag.length===1?'1 exercício estagnado':stag.length+' exercícios estagnados'}</b><span>${stag.map(i=>esc(i.e.nome)).join(', ')}: sem aumento de peso nem de repetições nas últimas 3 sessões ou mais.</span></div>`;
+  h+=`<div class="filters" role="group" aria-label="Filtrar por membro">${[['todos','Todos']].concat(cats.map(c=>[c.id,c.nome])).map(([id,nome])=>`<button type="button" class="chip" aria-pressed="${S.trFiltro===id}" data-a="trf" data-id="${esc(id)}">${esc(nome)}</button>`).join('')}</div>`;
+  const groups=S.trFiltro==='todos' ? cats : cats.filter(c=>c.id===S.trFiltro);
+  const visible=groups.filter(c=>S.trFiltro!=='todos' || items.some(i=>i.e.cat===c.id));
+  if(!S.tr.ex.length){
+    h+=`<div class="card"><h2>Exercícios</h2><p class="sub" style="margin:0">Cadastre seus exercícios abaixo e escolha o membro. Em cada treino, toque em <b>Registrar</b> e anote o peso e as repetições da série principal.</p></div>`;
+  } else if(!visible.length){
+    h+=`<div class="card"><p class="sub" style="margin:0">Nenhum exercício neste membro.</p></div>`;
+  } else {
+    for(const c of visible){
+      const list=items.filter(i=>i.e.cat===c.id);
+      h+=`<div class="card"><div class="row"><h2 style="flex:1">${esc(c.nome)}</h2><span class="sub">${list.length}</span></div>`;
+      h+=list.length?`<ul class="exlist">${exItems(list)}</ul>`:`<p class="sub" style="margin:0">Nenhum exercício de ${esc(c.nome)} ainda.</p>`;
+      h+=`</div>`;
+    }
+  }
+  const preferido=cats.find(c=>c.id===S.trFiltro);
+  const defCat=preferido?preferido.id:(cats.find(c=>c.id!=='sem')||cats[0]||{id:'sem'}).id;
+  h+=`<div class="card"><h2>Novo exercício</h2><form id="exadd" class="exadd"><input id="newex" placeholder="Nome (ex.: Supino reto)" maxlength="60" autocomplete="off" required><label class="memlabel">Membro<select id="newexcat" class="catsel">${catOptions(defCat)}</select></label><button class="btn" type="submit">Adicionar</button></form></div>`;
+  h+=catManage();
+  h+=`<p class="sub" style="margin:0">Conta como evolução: mais peso, ou o mesmo peso com mais repetições. O exercício fica em destaque quando passa 3 sessões sem nenhum dos dois. Os botões acima separam a lista por membro.</p>`;
   box.innerHTML=h;
+  const bar=box.querySelector('.filters'), ativo=bar&&bar.querySelector('[aria-pressed="true"]');
+  if(bar && ativo) bar.scrollLeft=Math.max(0, ativo.offsetLeft-(bar.clientWidth-ativo.offsetWidth)/2);
 }
 function renderExDetail(){
   const e=S.tr.ex.find(x=>x.id===S.exSel); if(!e){ S.exSel=null; renderTr(); return; }
@@ -529,6 +685,7 @@ function renderExDetail(){
   const first=L[0];
   let h=`<div class="row"><button class="btn ghost" data-a="exback">‹ Exercícios</button></div>`;
   h+=`<div class="card"><div class="exhead"><h2 style="flex:1">${esc(e.nome)}</h2>${chipOf(st)}</div>`;
+  h+=`<label class="memlabel">Membro${catSelect(e)}</label>`;
   if(L.length) h+=`<div class="stats" style="grid-template-columns:1fr 1fr">
       <div class="stat"><b>${kgFmt(st.best.kg)} kg × ${st.best.reps}</b><span>melhor marca, em ${fmtShort(st.best.d)}</span></div>
       <div class="stat"><b>${L.length>1?(st.best.kg-first.kg>=0?'+':'−')+kgFmt(Math.abs(st.best.kg-first.kg))+' kg':'–'}</b><span>${L.length>1?'desde o primeiro registro ('+fmtShort(first.d)+')':'registre mais sessões'}</span></div>
@@ -604,7 +761,7 @@ function render(){
 /* ---------- eventos ---------- */
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-v],[data-a]'); if(!t) return;
-  if(t.dataset.v){ S.view=t.dataset.v; if(S.view==='hoje') S.sel=today; if(S.view==='tr'){ S.exSel=null; S.exOpen=null; S.exDel=null; } render(); return; }
+  if(t.dataset.v){ S.view=t.dataset.v; if(S.view==='hoje') S.sel=today; if(S.view==='tr'){ S.exSel=null; S.exOpen=null; S.exDel=null; S.catRen=null; S.catDel=null; } render(); return; }
   const a=t.dataset.a, k=t.dataset.k, id=t.dataset.id;
   if(a==='yes') setDone(k,id,true);
   else if(a==='no') setDone(k,id,false);
@@ -627,30 +784,71 @@ document.addEventListener('click', e => {
   else if(a==='expf') exportar(true);
   else if(a==='exopen'){ S.exOpen=id; S.exDel=null; render(); const i=$('#ex-kg-'+id); i&&i.focus(); }
   else if(a==='exsel'){ S.exSel=id; S.exOpen=null; S.exDel=null; render(); window.scrollTo({top:0}); }
-  else if(a==='exback'){ S.exSel=null; render(); }
+  else if(a==='exback'){ S.exSel=null; render(); window.scrollTo({top:0}); }
   else if(a==='exdel'){ S.exDel=id; S.exOpen=null; render(); }
   else if(a==='exdelno'){ S.exDel=null; render(); }
   else if(a==='exdelok'){ S.tr.ex=S.tr.ex.filter(x=>x.id!==id); delete S.tr.log[id]; S.exDel=null; persist(); render(); }
   else if(a==='exrm'){ S.tr.log[S.exSel]=(S.tr.log[S.exSel]||[]).filter(r=>r.d!==k); persist(); render(); }
+  else if(a==='trf'){ S.trFiltro=id||'todos'; render(); }
+  else if(a==='catren'){ S.catRen=id; S.catDel=null; render(); setTimeout(()=>{ const i=document.querySelector('form[data-catren] input'); if(i){ i.focus(); i.select(); } },0); }
+  else if(a==='catrenno'){ S.catRen=null; render(); }
+  else if(a==='catdel'){ if(!id || id==='sem') return; S.catDel=id; S.catRen=null; render(); }
+  else if(a==='catdelno'){ S.catDel=null; render(); }
+  else if(a==='catdelok'){
+    if(id && id!=='sem'){
+      for(const ex of S.tr.ex) if(ex.cat===id) ex.cat='sem';
+      S.tr.cats=S.tr.cats.filter(c=>c.id!==id);
+      if(S.trFiltro===id) S.trFiltro='todos';
+    }
+    S.catDel=null; persist(); render();
+  }
   else if(a==='sug'){ S.goals.push({id:uid(), text:t.dataset.t}); saveGoals(); }
 });
 document.addEventListener('submit', e => {
   e.preventDefault();
   if(e.target.id==='medform'){ saveMed(); return; }
   if(e.target.dataset.ex){ saveEx(e.target.dataset.ex); return; }
-  if(e.target.id==='exadd'){ const n=$('#newex').value.trim(); if(n){ S.tr.ex.push({id:uid(), nome:n}); persist(); render(); setTimeout(()=>{const i=$('#newex'); i&&i.focus();},0); } return; }
+  if(e.target.dataset.catren){
+    const id=e.target.dataset.catren, nome=e.target.querySelector('input').value.trim(), c=S.tr.cats.find(x=>x.id===id), st=$('#status');
+    if(!c || !nome) return;
+    if(S.tr.cats.some(x=>x.id!==id && norm(x.nome)===norm(nome))){ st.hidden=false; st.textContent='Já existe um membro com esse nome.'; return; }
+    c.nome=nome; S.catRen=null; st.hidden=true; persist(); render(); return;
+  }
+  if(e.target.id==='catadd'){
+    const nome=$('#newcat').value.trim(), st=$('#status');
+    if(!nome) return;
+    if(S.tr.cats.some(c=>norm(c.nome)===norm(nome))){ st.hidden=false; st.textContent='Já existe um membro com esse nome.'; return; }
+    const c={id:freshId(), nome};
+    const i=S.tr.cats.findIndex(x=>x.id==='sem');
+    if(i<0) S.tr.cats.push(c); else S.tr.cats.splice(i,0,c);
+    S.trFiltro=c.id; st.hidden=true; persist(); render();
+    setTimeout(()=>{ const el=$('#newcat'); el&&el.focus(); },0);
+    return;
+  }
+  if(e.target.id==='exadd'){
+    const n=$('#newex').value.trim(), cat=$('#newexcat').value;
+    if(n && S.tr.cats.some(c=>c.id===cat)){ S.tr.ex.push({id:freshId(), nome:n, cat}); $('#status').hidden=true; persist(); render(); setTimeout(()=>{const i=$('#newex'); i&&i.focus();},0); }
+    return;
+  }
   const f=e.target, inp=f.querySelector('input'), txt=inp.value.trim(); if(!txt) return;
   if(f.dataset.k==='__goal'){ S.goals.push({id:uid(), text:txt}); saveGoals(); setTimeout(()=>{const i=$('#newgoal'); i&&i.focus();},0); }
   else addExtra(f.dataset.k, txt);
 });
 async function exportar(comFotos){
-  const data={app:'metas-do-dia', versao:4, exportado:new Date().toISOString(), goals:S.goals, days:S.days, med:S.med, tr:S.tr};
+  const data={app:'metas-do-dia', versao:VERSAO, exportado:new Date().toISOString(), goals:S.goals, days:S.days, med:S.med, tr:S.tr};
   if(comFotos){ data.fotos={}; for(const k of fotoKeys()){ try{ const b=await fotoGet(k); if(b) data.fotos[k]=await blobToDataURL(b); }catch(e){} } }
   const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'metas-do-dia-'+today+(comFotos?'-com-fotos':'')+'.json';
   document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 document.addEventListener('change', async e => {
+  if(e.target.dataset && e.target.dataset.excat){
+    const id=e.target.dataset.excat, cat=e.target.value, ex=S.tr.ex.find(x=>x.id===id), st=$('#status');
+    if(ex && cat && ex.cat!==cat && S.tr.cats.some(c=>c.id===cat)){
+      ex.cat=cat; st.hidden=false; st.textContent=ex.nome+' agora está em '+catNome(cat)+'.'; persist(); render();
+    }
+    return;
+  }
   if(e.target.id==='fslider'){ stopPlay(); S.fotoIdx=+e.target.value; showFoto(); return; }
   if(e.target.id==='m-foto' && e.target.files[0]){
     const st=$('#status');
@@ -663,11 +861,12 @@ document.addEventListener('change', async e => {
   try{
     const v = JSON.parse(await e.target.files[0].text());
     if(!v || !Array.isArray(v.goals) || typeof v.days!=='object') throw 0;
-    S.goals = v.goals; S.days = v.days; S.med = (v.med && typeof v.med==='object') ? v.med : {}; S.tr = (v.tr && Array.isArray(v.tr.ex)) ? {ex:v.tr.ex, log:v.tr.log||{}} : {ex:[], log:{}};
+    S.goals = v.goals; S.days = v.days; S.med = (v.med && typeof v.med==='object') ? v.med : {}; S.tr = migrateTr(v.tr);
+    S.exSel=null; S.exOpen=null; S.exDel=null; S.catRen=null; S.catDel=null; S.trFiltro='todos';
     let nf=0;
     if(v.fotos && typeof v.fotos==='object'){ for(const [k,du] of Object.entries(v.fotos)){ try{ const b=await (await fetch(du)).blob(); await fotoPut(k,b); dropUrl(k); if(S.med[k]){ S.med[k].foto=true; nf++; } }catch(err){} } }
     persist(); render();
-    st.textContent='Dados importados: '+Object.keys(v.days).length+' dias, '+v.goals.length+' metas fixas e '+Object.keys(S.med).length+' medições'+(nf?' ('+nf+' com foto)':'')+' e '+S.tr.ex.length+' exercícios.';
+    st.textContent='Dados importados: '+Object.keys(v.days).length+' dias, '+v.goals.length+' metas fixas e '+Object.keys(S.med).length+' medições'+(nf?' ('+nf+' com foto)':'')+' e '+S.tr.ex.length+' exercícios, organizados por membro.';
   }catch(err){ st.textContent='Esse arquivo não parece ser um backup do Metas do Dia. Escolha o arquivo .json que você exportou.'; }
   e.target.value='';
 });
@@ -676,8 +875,16 @@ if(location.hash==='#treino') S.view='tr'; else if(location.hash==='#medidas') S
 
 /* ---------- armazenamento local ---------- */
 function load(){
-  try{ const raw = localStorage.getItem(KEY); if(raw){ const v = JSON.parse(raw); S.goals = v.goals||[]; S.days = v.days||{}; S.med = v.med||{}; if(v.tr&&Array.isArray(v.tr.ex)) S.tr={ex:v.tr.ex, log:v.tr.log||{}}; } }catch(e){}
+  let parsed=null, had=false;
+  try{ const raw=localStorage.getItem(KEY); if(raw){ parsed=JSON.parse(raw); had=true; } }catch(e){}
   $('#status').hidden = true;
+  if(had && parsed && typeof parsed==='object'){
+    S.goals=Array.isArray(parsed.goals)?parsed.goals:[];
+    S.days=(parsed.days && typeof parsed.days==='object')?parsed.days:{};
+    S.med=(parsed.med && typeof parsed.med==='object')?parsed.med:{};
+    S.tr=migrateTr(parsed.tr);
+    if(parsed.versao!==VERSAO || JSON.stringify(parsed.tr??null)!==JSON.stringify(S.tr)) persist();
+  } else S.tr=migrateTr(null);
 }
 if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
